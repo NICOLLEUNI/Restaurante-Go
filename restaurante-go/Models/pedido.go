@@ -6,4 +6,5 @@ type Pedido struct {
 	Especificacion string
 	Estado         string
 	Tiempo         int
+	CocineroID     int
 }
