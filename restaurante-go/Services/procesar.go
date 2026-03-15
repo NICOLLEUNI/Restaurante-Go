@@ -2,11 +2,10 @@ package services
 
 import (
 	"fmt"
-
 	models "restaurante-go/Models"
 )
 
-func ProcesarPedidos(listaPedidos []models.Pedido) {
+func ProcesarPedidos(listaPedidos []models.Pedido, stats *models.Estadisticas) {
 
 	pedidos := make(chan models.Pedido)
 	resultados := make(chan models.Pedido)
@@ -32,6 +31,10 @@ func ProcesarPedidos(listaPedidos []models.Pedido) {
 		pedido := <-resultados
 
 		fmt.Println("Pedido listo:", pedido.Comida)
+
+		// actualizar estadísticas
+		stats.TotalPedidos++
+		stats.TiempoTotal += pedido.Tiempo
 
 	}
 
