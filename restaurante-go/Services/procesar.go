@@ -16,26 +16,32 @@ func ProcesarPedidos(listaPedidos []models.Pedido, inv *InventarioService, stats
 	//Guarda el momento en que inicia el procesamiento
 	inicio := time.Now()
 
-	//Canal para enviar pedidos a los cocineros
-	pedidos := make(chan models.Pedido)
 	//Canal para recibir pedidos terminados por los cocineros
-	resultados := make(chan models.Pedido)
+	resultados := make(chan models.Pedido, len(listaPedidos))
 
-	//Numero de cocineros que trabajaran en paralelo
+	//Numero de cocineros disponibles
 	numCocineros := 3
 
-	//Creamos goroutines para cada cocinero
+	//Creamos un canal individual por cocinero
+	canales := make(map[int]chan models.Pedido)
 	for i := 1; i <= numCocineros; i++ {
-		go Cocinero(i, pedidos, resultados, inv)
+		canales[i] = make(chan models.Pedido)
+		go Cocinero(i, canales[i], resultados, inv)
 	}
 
-	//Goroutine que envia los pedidos al canal "pedidos"
+	//Goroutine que envia cada pedido al canal de su cocinero asignado
 	go func() {
 		for _, pedido := range listaPedidos {
-			pedidos <- pedido
+			canal, ok := canales[pedido.CocineroID]
+			if !ok {
+				canal = canales[1] // Si el ID no existe, va al cocinero 1 por defecto
+			}
+			canal <- pedido
 		}
-		//Cerrar el canal cuando no hay mas pedidos
-		close(pedidos)
+		//Cerrar todos los canales cuando no hay mas pedidos
+		for _, c := range canales {
+			close(c)
+		}
 	}()
 
 	//Recibir resultados de los cocineros
